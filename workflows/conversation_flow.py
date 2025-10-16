@@ -13,11 +13,29 @@ class ConversationFlow:
         self.reflection_agent = ReflectionAgent(opik_tracer)
         self.router_agent = RouterAgent(opik_tracer)
         self.thread_id = thread_id
+        self.opik_tracer = opik_tracer
 
     def get_opening_message(self) -> str:
         return self.conversation_agent.get_opening_message()
 
     @opik.track(project_name="Issue Discovery Chatbot")
+    def _process_turn_with_trace(self, conversation_history: list, turn_count: int, reflection):
+        """Process turn logic with Opik tracking"""
+        # Update trace with thread_id
+        if self.thread_id:
+            opik_context.update_current_trace(
+                thread_id=self.thread_id,
+                tags=["streaming", "chatbot", "issue-discovery"]
+            )
+        
+        # This method is just for creating the trace
+        # The actual work is done in process_turn_streaming
+        return {
+            "turn_count": turn_count,
+            "reflection": reflection,
+            "thread_id": self.thread_id
+        }
+
     def process_turn_streaming(self, conversation_history: list, turn_count: int):
         """
         Process one turn of the conversation with streaming.
@@ -28,15 +46,11 @@ class ConversationFlow:
             'should_confirm': bool
         }
         """
-        # Set thread_id to group all turns from this conversation together
-        if self.thread_id:
-            opik_context.update_current_trace(
-                thread_id=self.thread_id,
-                tags=["issue-discovery", "chatbot", "demo"]
-            )
-
         # Analyze conversation
         reflection = self.reflection_agent.analyze(conversation_history, turn_count)
+        
+        # Create trace for this turn
+        self._process_turn_with_trace(conversation_history, turn_count, reflection)
 
         # Decide next action
         if turn_count >= config.MAX_TURNS:
@@ -54,6 +68,11 @@ class ConversationFlow:
                 'is_complete': True,
                 'should_confirm': should_confirm
             }
+            
+            # Flush traces
+            if self.opik_tracer:
+                self.opik_tracer.flush()
+                
         elif reflection.is_confident and not reflection.uncertain_issues:
             # Confident and no uncertain issues left - end conversation
             next_message = f"Based on our conversation, you care about: {', '.join(reflection.confident_issues)}. Thanks for sharing your thoughts!"
@@ -66,6 +85,10 @@ class ConversationFlow:
                 'is_complete': True,
                 'should_confirm': should_confirm
             }
+            
+            # Flush traces
+            if self.opik_tracer:
+                self.opik_tracer.flush()
         else:
             # Continue conversation - stream the response
             should_confirm = False
@@ -87,4 +110,8 @@ class ConversationFlow:
                 'is_complete': True,
                 'should_confirm': should_confirm
             }
+        
+        # Flush traces to ensure they're sent to Opik
+        if self.opik_tracer:
+            self.opik_tracer.flush()
 
