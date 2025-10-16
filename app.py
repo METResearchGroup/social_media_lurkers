@@ -1,3 +1,5 @@
+import uuid
+
 import streamlit as st
 
 import config
@@ -11,9 +13,15 @@ if 'messages' not in st.session_state:
     st.session_state.messages = []
 if 'turn_count' not in st.session_state:
     st.session_state.turn_count = 0
+if 'thread_id' not in st.session_state:
+    # Generate unique thread_id for this conversation session
+    st.session_state.thread_id = str(uuid.uuid4())
 if 'conversation_flow' not in st.session_state:
     opik_tracer = init_opik_tracer()
-    st.session_state.conversation_flow = ConversationFlow(opik_tracer)
+    st.session_state.conversation_flow = ConversationFlow(
+        opik_tracer,
+        thread_id=st.session_state.thread_id
+    )
 if 'awaiting_confirmation' not in st.session_state:
     st.session_state.awaiting_confirmation = False
 if 'conversation_complete' not in st.session_state:
@@ -30,6 +38,11 @@ with st.sidebar:
     st.divider()
     st.metric("Turn", f"{st.session_state.turn_count}/{config.MAX_TURNS}")
     st.progress(st.session_state.turn_count / config.MAX_TURNS)
+
+    st.divider()
+    st.caption("📊 Conversation Thread")
+    st.code(st.session_state.thread_id, language=None)
+    st.caption("Use this ID to find traces in Opik")
 
 # Main chat interface
 st.title("💬 Issue Discovery Chatbot")

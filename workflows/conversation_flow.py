@@ -1,3 +1,6 @@
+import opik
+from opik import opik_context
+
 import config
 from agents.conversation_agent import ConversationAgent
 from agents.reflection_agent import ReflectionAgent
@@ -5,14 +8,16 @@ from agents.router_agent import RouterAgent
 
 
 class ConversationFlow:
-    def __init__(self, opik_tracer=None):
+    def __init__(self, opik_tracer=None, thread_id=None):
         self.conversation_agent = ConversationAgent(opik_tracer)
         self.reflection_agent = ReflectionAgent(opik_tracer)
         self.router_agent = RouterAgent(opik_tracer)
+        self.thread_id = thread_id
 
     def get_opening_message(self) -> str:
         return self.conversation_agent.get_opening_message()
 
+    @opik.track(project_name="Issue Discovery Chatbot")
     def process_turn(self, conversation_history: list, turn_count: int) -> dict:
         """
         Process one turn of the conversation.
@@ -22,6 +27,13 @@ class ConversationFlow:
             'should_confirm': bool
         }
         """
+        # Set thread_id to group all turns from this conversation together
+        if self.thread_id:
+            opik_context.update_current_trace(
+                thread_id=self.thread_id,
+                tags=["issue-discovery", "chatbot", "demo"]
+            )
+
         # Analyze conversation
         reflection = self.reflection_agent.analyze(conversation_history, turn_count)
 
