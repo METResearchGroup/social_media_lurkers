@@ -78,6 +78,18 @@ with st.sidebar:
                         st.caption(f"{detail.confidence_level} signal(s)")
     else:
         st.caption("_Start chatting to see AI's analysis_")
+    
+    # All possible issues
+    with st.expander("📋 All Possible Issues", expanded=False):
+        st.caption(f"The AI is looking for mentions of these {len(config.ISSUES)} issues:")
+        for idx, issue in enumerate(config.ISSUES, 1):
+            # Check if this issue has been identified
+            is_identified = False
+            if st.session_state.last_reflection:
+                is_identified = issue in st.session_state.last_reflection.confident_issues
+            
+            emoji = "✅" if is_identified else "⚪"
+            st.markdown(f"{emoji} {idx}. {issue}")
 
 # Main chat interface
 st.title("💬 Issue Discovery Chatbot")
