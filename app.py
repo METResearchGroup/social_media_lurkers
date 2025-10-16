@@ -26,6 +26,8 @@ if 'awaiting_confirmation' not in st.session_state:
     st.session_state.awaiting_confirmation = False
 if 'conversation_complete' not in st.session_state:
     st.session_state.conversation_complete = False
+if 'last_reflection' not in st.session_state:
+    st.session_state.last_reflection = None
 
 # Sidebar
 with st.sidebar:
@@ -44,9 +46,66 @@ with st.sidebar:
     st.code(st.session_state.thread_id, language=None)
     st.caption("Use this ID to find traces in Opik")
 
+    # Real-time issue detection visualization
+    st.divider()
+    st.subheader("🎯 Issue Detection")
+    
+    if st.session_state.last_reflection:
+        reflection = st.session_state.last_reflection
+        
+        # Overall confidence status
+        if reflection.is_confident:
+            st.success("✅ **AI is CONFIDENT**")
+        else:
+            st.info("🔍 **AI is still exploring...**")
+        
+        # Confident issues
+        if reflection.confident_issues:
+            st.markdown("### ✅ Identified Issues")
+            for issue in reflection.confident_issues:
+                st.markdown(f"- **{issue}**")
+        else:
+            st.caption("_No issues identified yet_")
+        
+        # Issue details with confidence levels
+        if reflection.issue_details:
+            with st.expander("📊 Confidence Details", expanded=False):
+                for detail in reflection.issue_details:
+                    if detail.user_cares:
+                        emoji = "✅" if detail.confidence_level >= config.SIGNALS_PER_ISSUE else "🔍"
+                        st.markdown(f"{emoji} **{detail.issue_name}**")
+                        st.progress(min(detail.confidence_level / 2, 1.0))
+                        st.caption(f"{detail.confidence_level} signal(s)")
+    else:
+        st.caption("_Start chatting to see AI's analysis_")
+
 # Main chat interface
 st.title("💬 Issue Discovery Chatbot")
 st.caption("A multi-agent demo to discover what issues matter to you")
+
+# Main area issue visualization
+if st.session_state.last_reflection and st.session_state.turn_count > 0:
+    reflection = st.session_state.last_reflection
+    
+    # Create columns for metrics
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        status_emoji = "✅" if reflection.is_confident else "🔍"
+        status_text = "CONFIDENT" if reflection.is_confident else "EXPLORING"
+        st.metric("AI Status", status_text, delta=None)
+    
+    with col2:
+        st.metric("Issues Found", len(reflection.confident_issues))
+    
+    with col3:
+        st.metric("Turn", f"{st.session_state.turn_count}/{config.MAX_TURNS}")
+    
+    # Show identified issues in a nice card
+    if reflection.confident_issues:
+        st.info(f"**🎯 Identified Issues**: {', '.join(reflection.confident_issues)}")
+
+st.divider()
 
 # Display chat history
 for message in st.session_state.messages:
@@ -77,6 +136,9 @@ if not st.session_state.conversation_complete:
                 st.session_state.messages,
                 st.session_state.turn_count
             )
+
+        # Store reflection for visualization
+        st.session_state.last_reflection = result['reflection']
 
         # Add assistant response
         st.session_state.messages.append({
