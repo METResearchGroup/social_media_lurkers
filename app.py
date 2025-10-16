@@ -22,8 +22,6 @@ if 'conversation_flow' not in st.session_state:
         opik_tracer,
         thread_id=st.session_state.thread_id
     )
-if 'awaiting_confirmation' not in st.session_state:
-    st.session_state.awaiting_confirmation = False
 if 'conversation_complete' not in st.session_state:
     st.session_state.conversation_complete = False
 if 'last_reflection' not in st.session_state:
@@ -162,9 +160,8 @@ if not st.session_state.conversation_complete:
             st.markdown(result['next_message'])
 
         # Check if conversation is complete
-        if result['should_confirm']:
-            st.session_state.awaiting_confirmation = True
-        elif st.session_state.turn_count >= config.MAX_TURNS:
+        # The workflow now handles ending the conversation naturally
+        if st.session_state.turn_count >= config.MAX_TURNS:
             st.session_state.conversation_complete = True
 
         st.rerun()

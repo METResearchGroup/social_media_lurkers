@@ -38,20 +38,19 @@ class ConversationFlow:
         reflection = self.reflection_agent.analyze(conversation_history, turn_count)
 
         # Decide next action
-        if reflection.is_confident or turn_count >= config.MAX_TURNS:
-            # Generate confirmation message or final summary
-            if reflection.is_confident and turn_count < config.MAX_TURNS:
-                next_message = self.router_agent.route(reflection, conversation_history)
-                should_confirm = True
+        if turn_count >= config.MAX_TURNS:
+            # Max turns reached - end conversation
+            if reflection.confident_issues:
+                next_message = f"Here is what we think the most important issues are to you: {', '.join(reflection.confident_issues)}"
             else:
-                # Max turns reached
-                if reflection.confident_issues:
-                    next_message = f"Here is what we think the most important issues are to you: {', '.join(reflection.confident_issues)}"
-                else:
-                    next_message = "We weren't able to identify specific issues from our conversation."
-                should_confirm = False
+                next_message = "We weren't able to identify specific issues from our conversation."
+            should_confirm = False
+        elif reflection.is_confident and not reflection.uncertain_issues:
+            # Confident and no uncertain issues left - end conversation
+            next_message = f"Based on our conversation, you care about: {', '.join(reflection.confident_issues)}. Thanks for sharing your thoughts!"
+            should_confirm = False
         else:
-            # Generate next question
+            # Continue conversation - either not confident yet or still have uncertain issues
             next_message = self.router_agent.route(reflection, conversation_history)
             should_confirm = False
 

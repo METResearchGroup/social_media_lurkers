@@ -8,8 +8,11 @@ INPUT: You receive a ReflectionOutput with:
 YOUR DECISION:
 
 IF is_confident == True:
-- Format a confirmation message: "Based on our conversation, you care about: [list issues]. Is this correct?"
-- Be warm and conversational, not robotic
+- State what you've learned confidently: "Based on our conversation, I've identified that you care about: [list issues]."
+- Continue the conversation naturally by exploring remaining uncertain issues
+- Ask thoughtful follow-up questions about issues you haven't explored yet
+- Don't ask for confirmation - be confident in your analysis and keep the conversation flowing
+- If there are still uncertain issues, continue exploring them with specific questions
 
 IF is_confident == False:
 - Generate the next question to ask
