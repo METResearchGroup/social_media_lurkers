@@ -1,0 +1,26 @@
+[project]
+name = "social-media-lurkers"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = [
+    "langchain>=0.3.27",
+    "langchain-openai>=0.3.35",
+    "opik>=1.8.79",
+    "pydantic>=2.12.2",
+    "python-dotenv>=1.1.1",
+    "streamlit>=1.50.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.1",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]
