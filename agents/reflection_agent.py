@@ -46,10 +46,19 @@ Return a JSON object matching the ReflectionOutput schema."""
 
         # Parse JSON response and validate with Pydantic
         try:
-            data = json.loads(response.content)
+            # Extract JSON from markdown code blocks if present
+            content = response.content.strip()
+            if "```json" in content:
+                content = content.split("```json")[1].split("```")[0].strip()
+            elif "```" in content:
+                content = content.split("```")[1].split("```")[0].strip()
+
+            data = json.loads(content)
             return ReflectionOutput(**data)
-        except Exception:
+        except Exception as e:
             # Fallback if parsing fails
+            print(f"Warning: Failed to parse reflection output: {e}")
+            print(f"Raw response: {response.content[:500]}")
             return ReflectionOutput(
                 is_confident=False,
                 turn_count=turn_count,

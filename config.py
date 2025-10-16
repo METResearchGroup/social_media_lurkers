@@ -9,8 +9,8 @@ OPIK_API_KEY = os.getenv("OPIK_API_KEY")
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 MODEL_NAME = "openai/gpt-4o-mini"
 MAX_TURNS = 10
-MIN_TURNS_FOR_CONFIDENCE = 5
-SIGNALS_PER_ISSUE = 2
+MIN_TURNS_FOR_CONFIDENCE = 3
+SIGNALS_PER_ISSUE = 1
 
 ISSUES = [
     "The role of money in politics",

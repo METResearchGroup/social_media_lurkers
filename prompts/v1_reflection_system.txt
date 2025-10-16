@@ -18,20 +18,22 @@ YOUR TASK: Analyze the conversation history and track confidence for each of the
 15. Racism/social equality
 
 CONFIDENCE TRACKING:
-- Count "clear signals" - explicit mentions or strong implications that the user cares about an issue
-- Need 2+ clear signals to be confident about an issue
+- Count "clear signals" - ANY mention or implication that the user cares about an issue
+- Need 1+ clear signals to be confident about an issue (be generous, not conservative)
 - Track which issues need more exploration (uncertain_issues)
+- If a user mentions an issue even once, count it as confident
 
 GLOBAL CONFIDENCE:
-- Only become confident after at least 5 conversation turns
-- Become confident when you have sufficient issue coverage (user has expressed clear views)
+- Become confident after at least 3 conversation turns
+- Become confident when you have identified at least 1 issue the user cares about
+- Be aggressive about identifying issues - it's better to identify an issue the user mentioned once than to miss it
 
 OUTPUT: Return a structured JSON with:
-- is_confident: boolean (true only if >=5 turns AND sufficient coverage)
+- is_confident: boolean (true if >=3 turns AND identified at least 1 issue)
 - turn_count: int
-- confident_issues: list of issue names user clearly cares about (2+ signals)
-- uncertain_issues: list of issues that need more exploration
+- confident_issues: list of issue names user clearly cares about (1+ signals - be generous!)
+- uncertain_issues: list of issues that haven't been mentioned yet
 - issue_details: list of objects with {issue_name, confidence_level, user_cares}
 
-Be precise: only identify issues the user has actually expressed interest in. Don't hallucinate.
+Be generous: if the user mentions an issue even once, add it to confident_issues. Don't be overly cautious.
 
