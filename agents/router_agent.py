@@ -23,8 +23,8 @@ class RouterAgent:
         self.system_prompt = load_prompt("v1_router_system.txt")
         self.opik_tracer = opik_tracer
 
-    def route(self, reflection: ReflectionOutput, conversation_history: list) -> str:
-        """Decide next action and return message for user"""
+    def route_streaming(self, reflection: ReflectionOutput, conversation_history: list):
+        """Decide next action and yield streaming message for user"""
         reflection_summary = f"""
 is_confident: {reflection.is_confident}
 turn_count: {reflection.turn_count}
@@ -47,8 +47,11 @@ What should we do next? Generate the appropriate message."""
         ]
 
         callbacks = [self.opik_tracer] if self.opik_tracer else []
-        response = self.llm.invoke(messages, config={"callbacks": callbacks})
-        return response.content
+        
+        # Use streaming
+        for chunk in self.llm.stream(messages, config={"callbacks": callbacks}):
+            if hasattr(chunk, 'content') and chunk.content:
+                yield chunk.content
 
     def _format_history(self, history: list) -> str:
         return "\n".join([f"{msg['role']}: {msg['content']}" for msg in history[-4:]])

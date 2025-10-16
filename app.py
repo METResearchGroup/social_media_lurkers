@@ -140,29 +140,45 @@ if not st.session_state.conversation_complete:
         # Increment turn
         st.session_state.turn_count += 1
 
-        # Process turn
+        # Process turn with streaming
+        message_placeholder = st.empty()
+        full_message = ""
+        
         with st.spinner("Thinking..."):
-            result = st.session_state.conversation_flow.process_turn(
+            for result in st.session_state.conversation_flow.process_turn_streaming(
                 st.session_state.messages,
                 st.session_state.turn_count
-            )
-
-        # Store reflection for visualization
-        st.session_state.last_reflection = result['reflection']
-
-        # Add assistant response
-        st.session_state.messages.append({
-            "role": "assistant",
-            "content": result['next_message']
-        })
-
-        with st.chat_message("assistant"):
-            st.markdown(result['next_message'])
-
-        # Check if conversation is complete
-        # The workflow now handles ending the conversation naturally
-        if st.session_state.turn_count >= config.MAX_TURNS:
-            st.session_state.conversation_complete = True
+            ):
+                # Store reflection for visualization
+                st.session_state.last_reflection = result['reflection']
+                
+                # Accumulate message chunks
+                if result['message_chunk']:
+                    full_message += result['message_chunk']
+                    
+                    # Display streaming message
+                    with message_placeholder.container():
+                        with st.chat_message("assistant"):
+                            st.markdown(full_message + "▌")  # Cursor effect
+                
+                # If complete, finalize the message
+                if result['is_complete']:
+                    # Remove cursor and add final message
+                    with message_placeholder.container():
+                        with st.chat_message("assistant"):
+                            st.markdown(full_message)
+                    
+                    # Add to conversation history
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": full_message
+                    })
+                    
+                    # Check if conversation is complete
+                    if st.session_state.turn_count >= config.MAX_TURNS:
+                        st.session_state.conversation_complete = True
+                    
+                    break
 
         st.rerun()
 else:

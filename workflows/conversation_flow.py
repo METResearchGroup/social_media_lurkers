@@ -18,12 +18,13 @@ class ConversationFlow:
         return self.conversation_agent.get_opening_message()
 
     @opik.track(project_name="Issue Discovery Chatbot")
-    def process_turn(self, conversation_history: list, turn_count: int) -> dict:
+    def process_turn_streaming(self, conversation_history: list, turn_count: int):
         """
-        Process one turn of the conversation.
-        Returns: {
+        Process one turn of the conversation with streaming.
+        Yields: {
             'reflection': ReflectionOutput,
-            'next_message': str,
+            'message_chunk': str,
+            'is_complete': bool,
             'should_confirm': bool
         }
         """
@@ -45,18 +46,45 @@ class ConversationFlow:
             else:
                 next_message = "We weren't able to identify specific issues from our conversation."
             should_confirm = False
+            
+            # Yield the complete message
+            yield {
+                'reflection': reflection,
+                'message_chunk': next_message,
+                'is_complete': True,
+                'should_confirm': should_confirm
+            }
         elif reflection.is_confident and not reflection.uncertain_issues:
             # Confident and no uncertain issues left - end conversation
             next_message = f"Based on our conversation, you care about: {', '.join(reflection.confident_issues)}. Thanks for sharing your thoughts!"
             should_confirm = False
+            
+            # Yield the complete message
+            yield {
+                'reflection': reflection,
+                'message_chunk': next_message,
+                'is_complete': True,
+                'should_confirm': should_confirm
+            }
         else:
-            # Continue conversation - either not confident yet or still have uncertain issues
-            next_message = self.router_agent.route(reflection, conversation_history)
+            # Continue conversation - stream the response
             should_confirm = False
-
-        return {
-            'reflection': reflection,
-            'next_message': next_message,
-            'should_confirm': should_confirm
-        }
+            message_buffer = ""
+            
+            for chunk in self.router_agent.route_streaming(reflection, conversation_history):
+                message_buffer += chunk
+                yield {
+                    'reflection': reflection,
+                    'message_chunk': chunk,
+                    'is_complete': False,
+                    'should_confirm': should_confirm
+                }
+            
+            # Final yield to indicate completion
+            yield {
+                'reflection': reflection,
+                'message_chunk': "",
+                'is_complete': True,
+                'should_confirm': should_confirm
+            }
 
