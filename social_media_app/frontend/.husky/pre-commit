@@ -1,4 +1,4 @@
 npx lint-staged
-# npm run build  # Temporarily disabled due to PostHog/Next.js compatibility issue
+npm run build
 npm test
 
