@@ -137,7 +137,7 @@
 ## 📝 Configuration Files
 
 ### Environment Variables (.env)
-```
+```bash
 NEXT_PUBLIC_POSTHOG_KEY=<your_key>
 NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
 NEXT_PUBLIC_API_BASE=http://localhost:8000

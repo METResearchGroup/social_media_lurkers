@@ -1,9 +1,12 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { useParams, useRouter } from "next/navigation";
-import useSWR from "swr";
+import useSWR, { mutate } from "swr";
 import PostDetail from "../page";
 import { usePostVariant } from "@/hooks/usePostVariant";
 import { mockDataSource } from "@/lib/mockData";
+import * as api from "@/lib/api";
+import * as tracking from "@/lib/tracking";
 
 // Mock dependencies
 jest.mock("next/navigation", () => ({
@@ -11,7 +14,11 @@ jest.mock("next/navigation", () => ({
   useRouter: jest.fn(),
 }));
 
-jest.mock("swr");
+jest.mock("swr", () => ({
+  __esModule: true,
+  default: jest.fn(),
+  mutate: jest.fn(),
+}));
 
 jest.mock("@/hooks/usePostVariant");
 
@@ -19,6 +26,13 @@ jest.mock("@/lib/mockData", () => ({
   mockDataSource: {
     getAudienceStats: jest.fn(),
   },
+}));
+
+jest.mock("@/lib/api", () => ({
+  likePost: jest.fn(),
+  sharePost: jest.fn(),
+  commentPost: jest.fn(),
+  fetchPostDetail: jest.fn(),
 }));
 
 jest.mock("@/lib/tracking", () => ({
@@ -260,6 +274,221 @@ describe("PostDetail Page", () => {
     expect(screen.getByText(/10/)).toBeInTheDocument(); // Likes
     expect(screen.getByText(/3/)).toBeInTheDocument(); // Comments
     expect(screen.getByText(/2/)).toBeInTheDocument(); // Shares
+  });
+
+  describe("User Interactions and Tracking", () => {
+    beforeEach(() => {
+      (api.likePost as jest.Mock).mockResolvedValue({});
+      (api.sharePost as jest.Mock).mockResolvedValue({});
+      (api.commentPost as jest.Mock).mockResolvedValue({});
+    });
+
+    it("should track like engagement when like button clicked", async () => {
+      mockUseSWR.mockReturnValue({
+        data: {
+          post: mockPost,
+          comments: mockComments,
+          liked_by_current_user: false,
+        },
+        error: undefined,
+        isLoading: false,
+        mutate: jest.fn() as never,
+        isValidating: false,
+      });
+
+      render(<PostDetail />);
+      const likeButton = screen.getByText(/Like/);
+
+      await userEvent.click(likeButton);
+
+      expect(tracking.trackPostEngagement).toHaveBeenCalledWith(
+        "test-post-1",
+        "control",
+        "like"
+      );
+      expect(api.likePost).toHaveBeenCalledWith("test-post-1", "current-user");
+    });
+
+    it("should track share engagement when share button clicked", async () => {
+      mockUseSWR.mockReturnValue({
+        data: {
+          post: mockPost,
+          comments: mockComments,
+          liked_by_current_user: false,
+        },
+        error: undefined,
+        isLoading: false,
+        mutate: jest.fn() as never,
+        isValidating: false,
+      });
+
+      render(<PostDetail />);
+      const shareButton = screen.getByText(/Share/);
+
+      await userEvent.click(shareButton);
+
+      expect(tracking.trackPostEngagement).toHaveBeenCalledWith(
+        "test-post-1",
+        "control",
+        "share"
+      );
+      expect(api.sharePost).toHaveBeenCalledWith("test-post-1", "current-user");
+    });
+
+    it("should track comment engagement when comment submitted", async () => {
+      mockUseSWR.mockReturnValue({
+        data: {
+          post: mockPost,
+          comments: mockComments,
+          liked_by_current_user: false,
+        },
+        error: undefined,
+        isLoading: false,
+        mutate: jest.fn() as never,
+        isValidating: false,
+      });
+
+      render(<PostDetail />);
+      const textarea = screen.getByPlaceholderText(/Write a comment/);
+      const submitButton = screen.getByText(/Post Comment/);
+
+      await userEvent.type(textarea, "Great post!");
+      await userEvent.click(submitButton);
+
+      expect(tracking.trackPostEngagement).toHaveBeenCalledWith(
+        "test-post-1",
+        "control",
+        "comment"
+      );
+      expect(api.commentPost).toHaveBeenCalledWith(
+        "test-post-1",
+        "current-user",
+        "Great post!"
+      );
+    });
+
+    it("should track back button engagement", async () => {
+      const mockBack = jest.fn();
+      mockUseRouter.mockReturnValue({
+        back: mockBack,
+        push: jest.fn(),
+        replace: jest.fn(),
+        refresh: jest.fn(),
+        forward: jest.fn(),
+        prefetch: jest.fn(),
+      });
+
+      mockUseSWR.mockReturnValue({
+        data: {
+          post: mockPost,
+          comments: mockComments,
+          liked_by_current_user: false,
+        },
+        error: undefined,
+        isLoading: false,
+        mutate: jest.fn() as never,
+        isValidating: false,
+      });
+
+      render(<PostDetail />);
+      const backButton = screen.getByText(/← Back/);
+
+      await userEvent.click(backButton);
+
+      expect(tracking.trackPostEngagement).toHaveBeenCalledWith(
+        "test-post-1",
+        "control",
+        "back_button"
+      );
+      expect(mockBack).toHaveBeenCalled();
+    });
+
+    it("should track profile click engagement", async () => {
+      mockUseSWR.mockReturnValue({
+        data: {
+          post: mockPost,
+          comments: mockComments,
+          liked_by_current_user: false,
+        },
+        error: undefined,
+        isLoading: false,
+        mutate: jest.fn() as never,
+        isValidating: false,
+      });
+
+      render(<PostDetail />);
+      const authorName = screen.getByText("Test User");
+
+      await userEvent.click(authorName);
+
+      expect(tracking.trackPostEngagement).toHaveBeenCalledWith(
+        "test-post-1",
+        "control",
+        "profile_click"
+      );
+    });
+
+    it("should call setupDwellTimeTracking on mount", () => {
+      mockUseSWR.mockReturnValue({
+        data: {
+          post: mockPost,
+          comments: mockComments,
+          liked_by_current_user: false,
+        },
+        error: undefined,
+        isLoading: false,
+        mutate: jest.fn() as never,
+        isValidating: false,
+      });
+
+      render(<PostDetail />);
+
+      expect(tracking.setupDwellTimeTracking).toHaveBeenCalledWith(
+        "test-post-1",
+        "control",
+        true
+      );
+    });
+
+    it("should call setupScrollDepthTracking on mount", () => {
+      mockUseSWR.mockReturnValue({
+        data: {
+          post: mockPost,
+          comments: mockComments,
+          liked_by_current_user: false,
+        },
+        error: undefined,
+        isLoading: false,
+        mutate: jest.fn() as never,
+        isValidating: false,
+      });
+
+      render(<PostDetail />);
+
+      expect(tracking.setupScrollDepthTracking).toHaveBeenCalledWith(
+        "test-post-1",
+        "control",
+        true
+      );
+    });
+
+    it("should track post viewed on mount", () => {
+      mockUseSWR.mockReturnValue({
+        data: {
+          post: mockPost,
+          comments: mockComments,
+          liked_by_current_user: false,
+        },
+        error: undefined,
+        isLoading: false,
+        mutate: jest.fn() as never,
+        isValidating: false,
+      });
+
+      render(<PostDetail />);
+
+      expect(tracking.trackPostViewed).toHaveBeenCalledWith("test-post-1", "control");
+    });
   });
 });
 

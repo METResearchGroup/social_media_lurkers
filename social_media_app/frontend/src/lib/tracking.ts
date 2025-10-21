@@ -127,6 +127,20 @@ export function setupDwellTimeTracking(
   let totalVisibleTime = 0;
   let wasVisible = !document.hidden;
   let lastVisibilityChange = Date.now();
+  let hasTracked = false;
+
+  const trackDwellTime = () => {
+    if (hasTracked) return;
+    hasTracked = true;
+
+    const now = Date.now();
+    if (wasVisible) {
+      totalVisibleTime += now - lastVisibilityChange;
+    }
+    const totalTime = (now - startTime) / 1000;
+    const visibleTime = totalVisibleTime / 1000;
+    trackPostDwellTime(postId, variant, totalTime, visibleTime > totalTime * 0.5);
+  };
 
   const handleVisibilityChange = () => {
     const now = Date.now();
@@ -141,16 +155,8 @@ export function setupDwellTimeTracking(
     }
   };
 
-  const handleBeforeUnload = async () => {
-    const now = Date.now();
-    if (wasVisible) {
-      totalVisibleTime += now - lastVisibilityChange;
-    }
-    const totalTime = (now - startTime) / 1000;
-    const visibleTime = totalVisibleTime / 1000;
-    
-    // Track dwell time
-    await trackPostDwellTime(postId, variant, totalTime, visibleTime > totalTime * 0.5);
+  const handleBeforeUnload = () => {
+    trackDwellTime();
   };
 
   document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -159,15 +165,7 @@ export function setupDwellTimeTracking(
   return () => {
     document.removeEventListener("visibilitychange", handleVisibilityChange);
     window.removeEventListener("beforeunload", handleBeforeUnload);
-    
-    // Send final dwell time on cleanup
-    const now = Date.now();
-    if (wasVisible) {
-      totalVisibleTime += now - lastVisibilityChange;
-    }
-    const totalTime = (now - startTime) / 1000;
-    const visibleTime = totalVisibleTime / 1000;
-    trackPostDwellTime(postId, variant, totalTime, visibleTime > totalTime * 0.5);
+    trackDwellTime();
   };
 }
 
@@ -185,7 +183,8 @@ export function setupScrollDepthTracking(
   }
 
   let maxScrollDepth = 0;
-  let scrollCheckInterval: NodeJS.Timeout | null = null;
+  let scrollCheckInterval: ReturnType<typeof setInterval> | null = null;
+  let hasTrackedFinal = false;
 
   const calculateScrollPercentage = (): number => {
     const windowHeight = window.innerHeight;
@@ -204,9 +203,15 @@ export function setupScrollDepthTracking(
     maxScrollDepth = Math.max(maxScrollDepth, currentScroll);
   };
 
-  const sendScrollDepth = async () => {
+  const sendScrollDepth = () => {
     const currentScroll = calculateScrollPercentage();
-    await trackPostScrollDepth(postId, variant, currentScroll, maxScrollDepth);
+    trackPostScrollDepth(postId, variant, currentScroll, maxScrollDepth);
+  };
+
+  const sendFinalScrollDepth = () => {
+    if (hasTrackedFinal) return;
+    hasTrackedFinal = true;
+    sendScrollDepth();
   };
 
   // Track scroll events
@@ -216,15 +221,15 @@ export function setupScrollDepthTracking(
   scrollCheckInterval = setInterval(sendScrollDepth, 5000);
   
   // Send on page exit
-  window.addEventListener("beforeunload", sendScrollDepth);
+  window.addEventListener("beforeunload", sendFinalScrollDepth);
 
   return () => {
     window.removeEventListener("scroll", handleScroll);
-    window.removeEventListener("beforeunload", sendScrollDepth);
+    window.removeEventListener("beforeunload", sendFinalScrollDepth);
     if (scrollCheckInterval) {
       clearInterval(scrollCheckInterval);
     }
-    sendScrollDepth(); // Send final scroll depth
+    sendFinalScrollDepth();
   };
 }
 

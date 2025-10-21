@@ -2,14 +2,17 @@
 
 import { useEffect } from "react";
 
-// PostHog instance
+// PostHog instance tracking
 let posthogLoaded = false;
+let isInitializing = false;
 
 /**
  * Initialize PostHog on client side only
  */
 function initPostHog() {
-  if (typeof window === "undefined" || posthogLoaded) return;
+  if (typeof window === "undefined" || posthogLoaded || isInitializing) return;
+
+  isInitializing = true;
 
   // Load PostHog script dynamically
   const script = document.createElement("script");
@@ -22,11 +25,14 @@ function initPostHog() {
     interface WindowWithPostHog extends Window {
       posthog?: {
         init: (key: string, config: Record<string, unknown>) => void;
+        __loaded?: boolean;
       };
     }
 
-    if (posthogKey && posthogHost && (window as WindowWithPostHog).posthog) {
-      (window as WindowWithPostHog).posthog!.init(posthogKey, {
+    const windowWithPH = window as WindowWithPostHog;
+
+    if (posthogKey && posthogHost && windowWithPH.posthog && !windowWithPH.posthog.__loaded) {
+      windowWithPH.posthog.init(posthogKey, {
         api_host: posthogHost,
         person_profiles: "identified_only",
         capture_pageview: false,
@@ -35,10 +41,18 @@ function initPostHog() {
           if (process.env.NODE_ENV === "development") {
             console.log("PostHog initialized");
           }
+          posthogLoaded = true;
+          isInitializing = false;
         },
       });
-      posthogLoaded = true;
+    } else {
+      isInitializing = false;
     }
+  };
+  
+  script.onerror = () => {
+    console.error("Failed to load PostHog script");
+    isInitializing = false;
   };
   
   document.head.appendChild(script);

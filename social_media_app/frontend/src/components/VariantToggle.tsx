@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { usePostVariant } from "@/hooks/usePostVariant";
 import { POST_VARIANTS, VARIANT_DISPLAY_NAMES, type PostVariant } from "@/types/variants";
 
@@ -12,6 +12,21 @@ import { POST_VARIANTS, VARIANT_DISPLAY_NAMES, type PostVariant } from "@/types/
 export function VariantToggle() {
   const { variant, setManualOverride, clearOverride } = usePostVariant();
   const [isExpanded, setIsExpanded] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Handle outside clicks to close dropdown
+  useEffect(() => {
+    if (!isExpanded) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsExpanded(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isExpanded]);
 
   // Only show in development
   if (process.env.NODE_ENV !== "development") {
@@ -29,7 +44,7 @@ export function VariantToggle() {
   };
 
   return (
-    <div className="fixed right-4 top-4 z-50">
+    <div ref={dropdownRef} className="fixed right-4 top-4 z-50">
       {/* Toggle Button */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}

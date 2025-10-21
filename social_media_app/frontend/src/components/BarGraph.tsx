@@ -66,9 +66,9 @@ export function BarGraphGroup({ title, data, className = "" }: BarGraphGroupProp
       <h4 className="mb-3 text-sm font-semibold text-neutral-800 dark:text-neutral-200">
         {title}
       </h4>
-      {data.map((item, index) => (
+      {data.map((item) => (
         <BarGraph
-          key={index}
+          key={item.label}
           label={item.label}
           percentage={item.percentage}
           color={item.color}
