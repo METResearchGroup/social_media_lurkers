@@ -59,6 +59,7 @@ Build A/B testing infrastructure using PostHog to test 3 different variants of t
 - **Tickets**: [tickets/](./tickets/)
 - **Implementation Plan**: [plan_implementation.md](./plan_implementation.md)
 - **Progress Log**: [logs.md](./logs.md)
+- **Planning PR**: [#12](https://github.com/METResearchGroup/social_media_lurkers/pull/12)
 
 ## 📈 Current Status
 
