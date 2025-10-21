@@ -1,14 +1,28 @@
 "use client";
 
-import posthog from "posthog-js";
-import { PostHogProvider as PHProvider } from "posthog-js/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+
+// Lazy load PostHog to avoid SSR issues
+let posthog: any = null;
+let PostHogProvider: any = null;
 
 /**
  * Initialize PostHog client-side only
  */
-export function initPostHog() {
-  if (typeof window !== "undefined") {
+export async function initPostHog() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  if (posthog) {
+    return posthog;
+  }
+
+  try {
+    // Dynamic import to avoid SSR issues
+    const { default: posthogModule } = await import("posthog-js");
+    posthog = posthogModule;
+
     const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
     const posthogHost = process.env.NEXT_PUBLIC_POSTHOG_HOST;
 
@@ -18,7 +32,7 @@ export function initPostHog() {
         person_profiles: "identified_only",
         capture_pageview: false, // We'll handle this manually
         capture_pageleave: true,
-        loaded: (posthog) => {
+        loaded: (ph: any) => {
           if (process.env.NODE_ENV === "development") {
             console.log("PostHog initialized");
           }
@@ -27,7 +41,10 @@ export function initPostHog() {
     } else {
       console.warn("PostHog credentials not found in environment variables");
     }
+  } catch (error) {
+    console.error("Failed to initialize PostHog:", error);
   }
+
   return posthog;
 }
 
@@ -35,17 +52,30 @@ export function initPostHog() {
  * PostHog Provider component for Next.js App Router
  */
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
+  const [isInitialized, setIsInitialized] = useState(false);
+
   useEffect(() => {
-    initPostHog();
+    initPostHog().then(() => {
+      setIsInitialized(true);
+    });
   }, []);
 
-  return <PHProvider client={posthog}>{children}</PHProvider>;
+  // Render children directly without PostHog provider wrapper
+  // PostHog works globally once initialized
+  return <>{children}</>;
 }
 
 /**
  * Get PostHog client instance
  */
 export function getPostHog() {
-  return posthog;
+  if (typeof window === "undefined") {
+    // Return mock object for SSR
+    return {
+      capture: () => {},
+      init: () => {},
+    };
+  }
+  return posthog || { capture: () => {}, init: () => {} };
 }
 

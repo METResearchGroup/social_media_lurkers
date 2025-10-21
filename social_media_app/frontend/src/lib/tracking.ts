@@ -12,7 +12,10 @@ import type { PostVariant } from "@/types/variants";
  * Track when a post detail page is viewed
  */
 export function trackPostViewed(postId: string, variant: PostVariant): void {
+  if (typeof window === "undefined") return;
+  
   const posthog = getPostHog();
+  if (!posthog || !posthog.capture) return;
   
   const properties: PostViewedProperties = {
     post_id: postId,
@@ -31,7 +34,10 @@ export function trackPostEngagement(
   variant: PostVariant,
   engagementType: EngagementType
 ): void {
+  if (typeof window === "undefined") return;
+  
   const posthog = getPostHog();
+  if (!posthog || !posthog.capture) return;
   
   const isPositive = ["like", "comment", "share", "profile_click"].includes(engagementType);
   
@@ -55,7 +61,10 @@ export function trackPostDwellTime(
   dwellTimeSeconds: number,
   wasVisible: boolean
 ): void {
+  if (typeof window === "undefined") return;
+  
   const posthog = getPostHog();
+  if (!posthog || !posthog.capture) return;
   
   const properties: PostDwellTimeProperties = {
     post_id: postId,
@@ -77,7 +86,10 @@ export function trackPostScrollDepth(
   scrollPercentage: number,
   maxScrollReached: number
 ): void {
+  if (typeof window === "undefined") return;
+  
   const posthog = getPostHog();
+  if (!posthog || !posthog.capture) return;
   
   const properties: PostScrollDepthProperties = {
     post_id: postId,

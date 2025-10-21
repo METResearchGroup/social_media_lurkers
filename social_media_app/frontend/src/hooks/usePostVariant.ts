@@ -1,6 +1,5 @@
 "use client";
 
-import { useFeatureFlagVariantKey } from "posthog-js/react";
 import { useEffect, useState } from "react";
 import {
   PostVariant,
@@ -8,6 +7,7 @@ import {
   FEATURE_FLAG_KEY,
   VARIANT_OVERRIDE_KEY,
 } from "@/types/variants";
+import { getPostHog } from "@/lib/posthog";
 
 /**
  * Hook to get the current post detail page variant
@@ -28,10 +28,19 @@ export function usePostVariant(): {
 } {
   const [isClient, setIsClient] = useState(false);
   const [manualOverride, setManualOverride] = useState<PostVariant | null>(null);
+  const [featureFlagVariant, setFeatureFlagVariant] = useState<string | null>(null);
   
   // Get variant from PostHog feature flag
-  const featureFlagVariant = useFeatureFlagVariantKey(FEATURE_FLAG_KEY);
-  
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const posthog = getPostHog();
+      if (posthog && posthog.getFeatureFlag) {
+        const variant = posthog.getFeatureFlag(FEATURE_FLAG_KEY);
+        setFeatureFlagVariant(variant);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     setIsClient(true);
     
