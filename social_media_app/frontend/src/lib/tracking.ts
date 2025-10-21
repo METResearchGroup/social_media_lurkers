@@ -1,4 +1,3 @@
-import { getPostHog } from "./posthog";
 import type {
   EngagementType,
   PostViewedProperties,
@@ -9,13 +8,28 @@ import type {
 import type { PostVariant } from "@/types/variants";
 
 /**
+ * Get PostHog instance dynamically to avoid SSR issues
+ */
+async function getPostHogAsync() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  
+  try {
+    const { getPostHog } = await import("./posthog");
+    return getPostHog();
+  } catch (error) {
+    console.error("Failed to load PostHog:", error);
+    return null;
+  }
+}
+
+/**
  * Track when a post detail page is viewed
  */
-export function trackPostViewed(postId: string, variant: PostVariant): void {
-  if (typeof window === "undefined") return;
-  
-  const posthog = getPostHog();
-  if (!posthog || !posthog.capture) return;
+export async function trackPostViewed(postId: string, variant: PostVariant): Promise<void> {
+  const posthog = await getPostHogAsync();
+  if (!posthog) return;
   
   const properties: PostViewedProperties = {
     post_id: postId,
@@ -29,15 +43,13 @@ export function trackPostViewed(postId: string, variant: PostVariant): void {
 /**
  * Track engagement events (like, comment, share, etc.)
  */
-export function trackPostEngagement(
+export async function trackPostEngagement(
   postId: string,
   variant: PostVariant,
   engagementType: EngagementType
-): void {
-  if (typeof window === "undefined") return;
-  
-  const posthog = getPostHog();
-  if (!posthog || !posthog.capture) return;
+): Promise<void> {
+  const posthog = await getPostHogAsync();
+  if (!posthog) return;
   
   const isPositive = ["like", "comment", "share", "profile_click"].includes(engagementType);
   
@@ -55,16 +67,14 @@ export function trackPostEngagement(
 /**
  * Track dwell time on post detail page
  */
-export function trackPostDwellTime(
+export async function trackPostDwellTime(
   postId: string,
   variant: PostVariant,
   dwellTimeSeconds: number,
   wasVisible: boolean
-): void {
-  if (typeof window === "undefined") return;
-  
-  const posthog = getPostHog();
-  if (!posthog || !posthog.capture) return;
+): Promise<void> {
+  const posthog = await getPostHogAsync();
+  if (!posthog) return;
   
   const properties: PostDwellTimeProperties = {
     post_id: postId,
@@ -80,16 +90,14 @@ export function trackPostDwellTime(
 /**
  * Track scroll depth on post detail page
  */
-export function trackPostScrollDepth(
+export async function trackPostScrollDepth(
   postId: string,
   variant: PostVariant,
   scrollPercentage: number,
   maxScrollReached: number
-): void {
-  if (typeof window === "undefined") return;
-  
-  const posthog = getPostHog();
-  if (!posthog || !posthog.capture) return;
+): Promise<void> {
+  const posthog = await getPostHogAsync();
+  if (!posthog) return;
   
   const properties: PostScrollDepthProperties = {
     post_id: postId,
@@ -103,10 +111,10 @@ export function trackPostScrollDepth(
 }
 
 /**
- * Hook for tracking dwell time with Page Visibility API
+ * Set up dwell time tracking with Page Visibility API
  * Returns cleanup function
  */
-export function useDwellTimeTracking(
+export function setupDwellTimeTracking(
   postId: string,
   variant: PostVariant,
   enabled: boolean = true
@@ -115,7 +123,7 @@ export function useDwellTimeTracking(
     return () => {};
   }
 
-  let startTime = Date.now();
+  const startTime = Date.now();
   let totalVisibleTime = 0;
   let wasVisible = !document.hidden;
   let lastVisibilityChange = Date.now();
@@ -133,7 +141,7 @@ export function useDwellTimeTracking(
     }
   };
 
-  const handleBeforeUnload = () => {
+  const handleBeforeUnload = async () => {
     const now = Date.now();
     if (wasVisible) {
       totalVisibleTime += now - lastVisibilityChange;
@@ -142,7 +150,7 @@ export function useDwellTimeTracking(
     const visibleTime = totalVisibleTime / 1000;
     
     // Track dwell time
-    trackPostDwellTime(postId, variant, totalTime, visibleTime > totalTime * 0.5);
+    await trackPostDwellTime(postId, variant, totalTime, visibleTime > totalTime * 0.5);
   };
 
   document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -164,10 +172,10 @@ export function useDwellTimeTracking(
 }
 
 /**
- * Hook for tracking scroll depth with IntersectionObserver
+ * Set up scroll depth tracking
  * Returns cleanup function
  */
-export function useScrollDepthTracking(
+export function setupScrollDepthTracking(
   postId: string,
   variant: PostVariant,
   enabled: boolean = true
@@ -196,9 +204,9 @@ export function useScrollDepthTracking(
     maxScrollDepth = Math.max(maxScrollDepth, currentScroll);
   };
 
-  const sendScrollDepth = () => {
+  const sendScrollDepth = async () => {
     const currentScroll = calculateScrollPercentage();
-    trackPostScrollDepth(postId, variant, currentScroll, maxScrollDepth);
+    await trackPostScrollDepth(postId, variant, currentScroll, maxScrollDepth);
   };
 
   // Track scroll events

@@ -3,8 +3,8 @@ import {
   trackPostEngagement,
   trackPostDwellTime,
   trackPostScrollDepth,
-  useDwellTimeTracking,
-  useScrollDepthTracking,
+  setupDwellTimeTracking,
+  setupScrollDepthTracking,
 } from "../tracking";
 import { getPostHog } from "../posthog";
 
@@ -16,13 +16,14 @@ jest.mock("../posthog", () => ({
 const mockGetPostHog = getPostHog as jest.MockedFunction<typeof getPostHog>;
 
 describe("Event Tracking Utilities", () => {
-  let mockPostHog: { capture: jest.Mock };
+  let mockPostHog: { capture: jest.Mock; getFeatureFlag: jest.Mock };
 
   beforeEach(() => {
     mockPostHog = {
       capture: jest.fn(),
+      getFeatureFlag: jest.fn(),
     };
-    mockGetPostHog.mockReturnValue(mockPostHog as any);
+    mockGetPostHog.mockReturnValue(mockPostHog);
     jest.clearAllMocks();
   });
 
@@ -208,7 +209,7 @@ describe("Event Tracking Utilities", () => {
     });
   });
 
-  describe("useDwellTimeTracking", () => {
+  describe("setupDwellTimeTracking", () => {
     let addEventListenerSpy: jest.SpyInstance;
     let removeEventListenerSpy: jest.SpyInstance;
 
@@ -225,7 +226,7 @@ describe("Event Tracking Utilities", () => {
     });
 
     it("should set up event listeners when enabled", () => {
-      const cleanup = useDwellTimeTracking("test-post", "control", true);
+      const cleanup = setupDwellTimeTracking("test-post", "control", true);
 
       expect(document.addEventListener).toHaveBeenCalledWith(
         "visibilitychange",
@@ -240,7 +241,7 @@ describe("Event Tracking Utilities", () => {
     });
 
     it("should not set up listeners when disabled", () => {
-      const cleanup = useDwellTimeTracking("test-post", "control", false);
+      const cleanup = setupDwellTimeTracking("test-post", "control", false);
 
       expect(document.addEventListener).not.toHaveBeenCalled();
       expect(window.addEventListener).not.toHaveBeenCalled();
@@ -249,7 +250,7 @@ describe("Event Tracking Utilities", () => {
     });
 
     it("should track dwell time on cleanup", () => {
-      const cleanup = useDwellTimeTracking("test-post", "control", true);
+      const cleanup = setupDwellTimeTracking("test-post", "control", true);
       
       cleanup();
 
@@ -263,7 +264,7 @@ describe("Event Tracking Utilities", () => {
     });
 
     it("should clean up event listeners", () => {
-      const cleanup = useDwellTimeTracking("test-post", "control", true);
+      const cleanup = setupDwellTimeTracking("test-post", "control", true);
       
       cleanup();
 
@@ -278,7 +279,7 @@ describe("Event Tracking Utilities", () => {
     });
   });
 
-  describe("useScrollDepthTracking", () => {
+  describe("setupScrollDepthTracking", () => {
     let setIntervalSpy: jest.SpyInstance;
     let clearIntervalSpy: jest.SpyInstance;
 
@@ -295,7 +296,7 @@ describe("Event Tracking Utilities", () => {
     });
 
     it("should set up scroll tracking when enabled", () => {
-      const cleanup = useScrollDepthTracking("test-post", "treatment", true);
+      const cleanup = setupScrollDepthTracking("test-post", "treatment", true);
 
       expect(window.addEventListener).toHaveBeenCalledWith(
         "scroll",
@@ -308,7 +309,7 @@ describe("Event Tracking Utilities", () => {
     });
 
     it("should not set up tracking when disabled", () => {
-      const cleanup = useScrollDepthTracking("test-post", "treatment", false);
+      const cleanup = setupScrollDepthTracking("test-post", "treatment", false);
 
       expect(window.addEventListener).not.toHaveBeenCalled();
       expect(setInterval).not.toHaveBeenCalled();
@@ -317,7 +318,7 @@ describe("Event Tracking Utilities", () => {
     });
 
     it("should track scroll depth on cleanup", () => {
-      const cleanup = useScrollDepthTracking("test-post", "treatment", true);
+      const cleanup = setupScrollDepthTracking("test-post", "treatment", true);
       
       cleanup();
 
@@ -331,7 +332,7 @@ describe("Event Tracking Utilities", () => {
     });
 
     it("should clean up event listeners and interval", () => {
-      const cleanup = useScrollDepthTracking("test-post", "treatment", true);
+      const cleanup = setupScrollDepthTracking("test-post", "treatment", true);
       
       cleanup();
 

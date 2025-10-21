@@ -27,7 +27,7 @@ function generateRandomBreakdown(
   percentages = percentages.map((p) => Math.max(p, minPercentage));
   
   // Adjust to ensure sum is exactly 100
-  let currentSum = percentages.reduce((a, b) => a + b, 0);
+  const currentSum = percentages.reduce((a, b) => a + b, 0);
   if (currentSum !== 100) {
     const diff = 100 - currentSum;
     // Add/subtract difference to the largest category
@@ -97,7 +97,8 @@ function generateCommenterAttitudes(
 /**
  * Generate mock audience statistics for a post
  */
-export function generateMockAudienceStats(postId: string): AudienceStatistics {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function generateMockAudienceStats(_postId: string): AudienceStatistics {
   // Generate random viewer count (100-500)
   const viewerCount = Math.floor(Math.random() * 400) + 100;
   

@@ -24,8 +24,8 @@ jest.mock("@/lib/mockData", () => ({
 jest.mock("@/lib/tracking", () => ({
   trackPostViewed: jest.fn(),
   trackPostEngagement: jest.fn(),
-  useDwellTimeTracking: jest.fn(() => () => {}),
-  useScrollDepthTracking: jest.fn(() => () => {}),
+  setupDwellTimeTracking: jest.fn(() => () => {}),
+  setupScrollDepthTracking: jest.fn(() => () => {}),
 }));
 
 jest.mock("@/components/VariantToggle", () => ({
@@ -34,7 +34,7 @@ jest.mock("@/components/VariantToggle", () => ({
 
 const mockUseParams = useParams as jest.MockedFunction<typeof useParams>;
 const mockUseRouter = useRouter as jest.MockedFunction<typeof useRouter>;
-const mockUseSWR = useSWR as jest.MockedFunction<typeof useSWR>;
+const mockUseSWR = useSWR as jest.MockedFunction<typeof useSWR<PostDetailResponse>>;
 const mockUsePostVariant = usePostVariant as jest.MockedFunction<typeof usePostVariant>;
 const mockGetAudienceStats = mockDataSource.getAudienceStats as jest.MockedFunction<
   typeof mockDataSource.getAudienceStats
@@ -87,7 +87,12 @@ describe("PostDetail Page", () => {
     mockUseParams.mockReturnValue({ id: "test-post-1" });
     mockUseRouter.mockReturnValue({
       back: jest.fn(),
-    } as any);
+      push: jest.fn(),
+      replace: jest.fn(),
+      refresh: jest.fn(),
+      forward: jest.fn(),
+      prefetch: jest.fn(),
+    });
     mockUsePostVariant.mockReturnValue({
       variant: "control",
       isLoading: false,
@@ -102,9 +107,9 @@ describe("PostDetail Page", () => {
       data: undefined,
       error: undefined,
       isLoading: true,
-      mutate: jest.fn(),
+      mutate: jest.fn() as never,
       isValidating: false,
-    } as any);
+    });
 
     render(<PostDetail />);
 
@@ -116,9 +121,9 @@ describe("PostDetail Page", () => {
       data: undefined,
       error: new Error("Failed to load"),
       isLoading: false,
-      mutate: jest.fn(),
+      mutate: jest.fn() as never,
       isValidating: false,
-    } as any);
+    });
 
     render(<PostDetail />);
 
@@ -134,9 +139,9 @@ describe("PostDetail Page", () => {
       },
       error: undefined,
       isLoading: false,
-      mutate: jest.fn(),
+      mutate: jest.fn() as never,
       isValidating: false,
-    } as any);
+    });
 
     render(<PostDetail />);
 
@@ -163,9 +168,9 @@ describe("PostDetail Page", () => {
       },
       error: undefined,
       isLoading: false,
-      mutate: jest.fn(),
+      mutate: jest.fn() as never,
       isValidating: false,
-    } as any);
+    });
 
     render(<PostDetail />);
 
@@ -190,9 +195,9 @@ describe("PostDetail Page", () => {
       },
       error: undefined,
       isLoading: false,
-      mutate: jest.fn(),
+      mutate: jest.fn() as never,
       isValidating: false,
-    } as any);
+    });
 
     render(<PostDetail />);
 
@@ -210,9 +215,9 @@ describe("PostDetail Page", () => {
       },
       error: undefined,
       isLoading: false,
-      mutate: jest.fn(),
+      mutate: jest.fn() as never,
       isValidating: false,
-    } as any);
+    });
 
     render(<PostDetail />);
 
@@ -228,9 +233,9 @@ describe("PostDetail Page", () => {
       },
       error: undefined,
       isLoading: false,
-      mutate: jest.fn(),
+      mutate: jest.fn() as never,
       isValidating: false,
-    } as any);
+    });
 
     render(<PostDetail />);
 
@@ -246,9 +251,9 @@ describe("PostDetail Page", () => {
       },
       error: undefined,
       isLoading: false,
-      mutate: jest.fn(),
+      mutate: jest.fn() as never,
       isValidating: false,
-    } as any);
+    });
 
     render(<PostDetail />);
 

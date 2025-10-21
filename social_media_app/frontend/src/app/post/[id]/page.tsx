@@ -15,8 +15,8 @@ import { usePostVariant } from "@/hooks/usePostVariant";
 import {
   trackPostViewed,
   trackPostEngagement,
-  useDwellTimeTracking,
-  useScrollDepthTracking,
+  setupDwellTimeTracking,
+  setupScrollDepthTracking,
 } from "@/lib/tracking";
 import { mockDataSource } from "@/lib/mockData";
 import type { AudienceStatistics } from "@/types/audienceStats";
@@ -49,13 +49,13 @@ export default function PostDetail() {
 
   // Set up dwell time tracking
   useEffect(() => {
-    const cleanup = useDwellTimeTracking(postId, variant, true);
+    const cleanup = setupDwellTimeTracking(postId, variant, true);
     return cleanup;
   }, [postId, variant]);
 
   // Set up scroll depth tracking
   useEffect(() => {
-    const cleanup = useScrollDepthTracking(postId, variant, true);
+    const cleanup = setupScrollDepthTracking(postId, variant, true);
     return cleanup;
   }, [postId, variant]);
 

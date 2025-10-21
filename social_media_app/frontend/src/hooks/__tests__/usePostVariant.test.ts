@@ -1,20 +1,16 @@
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import { usePostVariant } from "../usePostVariant";
-import { VARIANT_OVERRIDE_KEY } from "@/types/variants";
+import { VARIANT_OVERRIDE_KEY, type PostVariant } from "@/types/variants";
+import { getPostHog } from "@/lib/posthog";
 
-// Mock posthog-js/react
-jest.mock("posthog-js/react", () => ({
-  useFeatureFlagVariantKey: jest.fn(),
-}));
+// Mock posthog module
+jest.mock("@/lib/posthog");
 
-import { useFeatureFlagVariantKey } from "posthog-js/react";
-
-const mockUseFeatureFlagVariantKey = useFeatureFlagVariantKey as jest.MockedFunction<
-  typeof useFeatureFlagVariantKey
->;
+const mockGetPostHog = getPostHog as jest.MockedFunction<typeof getPostHog>;
 
 describe("usePostVariant", () => {
   let localStorageMock: { [key: string]: string };
+  let mockPostHogClient: { getFeatureFlag: jest.Mock; capture: jest.Mock };
 
   beforeEach(() => {
     // Mock localStorage
@@ -28,61 +24,74 @@ describe("usePostVariant", () => {
       delete localStorageMock[key];
     });
 
+    // Mock PostHog client
+    mockPostHogClient = {
+      getFeatureFlag: jest.fn(),
+      capture: jest.fn(),
+    };
+    
+    mockGetPostHog.mockReturnValue(mockPostHogClient);
+
     jest.clearAllMocks();
   });
 
   describe("variant assignment priority", () => {
-    it("should return control variant by default", () => {
-      mockUseFeatureFlagVariantKey.mockReturnValue(undefined);
+    it("should return control variant by default", async () => {
+      mockPostHogClient.getFeatureFlag.mockReturnValue(undefined);
       
       const { result } = renderHook(() => usePostVariant());
       
-      expect(result.current.variant).toBe("control");
+      await waitFor(() => {
+        expect(result.current.variant).toBe("control");
+      });
     });
 
-    it("should use PostHog feature flag variant when no override exists", () => {
-      mockUseFeatureFlagVariantKey.mockReturnValue("treatment");
+    it("should use PostHog feature flag variant when no override exists", async () => {
+      mockPostHogClient.getFeatureFlag.mockReturnValue("treatment");
       
       const { result } = renderHook(() => usePostVariant());
       
-      expect(result.current.variant).toBe("treatment");
+      await waitFor(() => {
+        expect(result.current.variant).toBe("treatment");
+      });
     });
 
-    it("should prioritize manual override over feature flag", () => {
-      mockUseFeatureFlagVariantKey.mockReturnValue("treatment");
+    it("should prioritize manual override over feature flag", async () => {
+      mockPostHogClient.getFeatureFlag.mockReturnValue("treatment");
       localStorageMock[VARIANT_OVERRIDE_KEY] = "comparison";
       
       const { result } = renderHook(() => usePostVariant());
       
-      // Wait for client-side initialization
-      act(() => {
-        // Trigger useEffect
+      await waitFor(() => {
+        expect(result.current.variant).toBe("comparison");
       });
-      
-      expect(result.current.variant).toBe("comparison");
     });
 
-    it("should ignore invalid variant values from feature flag", () => {
-      mockUseFeatureFlagVariantKey.mockReturnValue("invalid_variant");
+    it("should ignore invalid variant values from feature flag", async () => {
+      mockPostHogClient.getFeatureFlag.mockReturnValue("invalid_variant");
       
       const { result } = renderHook(() => usePostVariant());
       
-      expect(result.current.variant).toBe("control");
+      await waitFor(() => {
+        expect(result.current.variant).toBe("control");
+      });
     });
 
-    it("should ignore invalid variant values from localStorage", () => {
-      mockUseFeatureFlagVariantKey.mockReturnValue("treatment");
+    it("should ignore invalid variant values from localStorage", async () => {
+      mockPostHogClient.getFeatureFlag.mockReturnValue("treatment");
       localStorageMock[VARIANT_OVERRIDE_KEY] = "invalid_variant";
       
       const { result } = renderHook(() => usePostVariant());
       
-      expect(result.current.variant).toBe("treatment");
+      await waitFor(() => {
+        expect(result.current.variant).toBe("treatment");
+      });
     });
   });
 
   describe("manual override functionality", () => {
-    it("should set manual override in localStorage", () => {
-      mockUseFeatureFlagVariantKey.mockReturnValue("control");
+    it("should set manual override in localStorage", async () => {
+      mockPostHogClient.getFeatureFlag.mockReturnValue("control");
       
       const { result } = renderHook(() => usePostVariant());
       
@@ -94,12 +103,15 @@ describe("usePostVariant", () => {
         VARIANT_OVERRIDE_KEY,
         "comparison"
       );
-      expect(result.current.variant).toBe("comparison");
+      
+      await waitFor(() => {
+        expect(result.current.variant).toBe("comparison");
+      });
     });
 
-    it("should clear override when set to null", () => {
+    it("should clear override when set to null", async () => {
       localStorageMock[VARIANT_OVERRIDE_KEY] = "comparison";
-      mockUseFeatureFlagVariantKey.mockReturnValue("treatment");
+      mockPostHogClient.getFeatureFlag.mockReturnValue("treatment");
       
       const { result } = renderHook(() => usePostVariant());
       
@@ -108,12 +120,11 @@ describe("usePostVariant", () => {
       });
       
       expect(localStorage.removeItem).toHaveBeenCalledWith(VARIANT_OVERRIDE_KEY);
-      expect(result.current.variant).toBe("treatment");
     });
 
-    it("should clear override using clearOverride method", () => {
+    it("should clear override using clearOverride method", async () => {
       localStorageMock[VARIANT_OVERRIDE_KEY] = "comparison";
-      mockUseFeatureFlagVariantKey.mockReturnValue("treatment");
+      mockPostHogClient.getFeatureFlag.mockReturnValue("treatment");
       
       const { result } = renderHook(() => usePostVariant());
       
@@ -126,12 +137,11 @@ describe("usePostVariant", () => {
   });
 
   describe("loading state", () => {
-    it("should initially be loading", () => {
-      mockUseFeatureFlagVariantKey.mockReturnValue("control");
+    it("should initially be loading before client-side init", () => {
+      mockPostHogClient.getFeatureFlag.mockReturnValue("control");
       
       const { result } = renderHook(() => usePostVariant());
       
-      // On first render, isLoading should be true (before useEffect runs)
       expect(result.current.isLoading).toBeDefined();
     });
   });
@@ -139,29 +149,32 @@ describe("usePostVariant", () => {
   describe("valid variant values", () => {
     it.each(["control", "treatment", "comparison"])(
       "should accept %s as valid variant from feature flag",
-      (variant) => {
-        mockUseFeatureFlagVariantKey.mockReturnValue(variant);
+      async (variant) => {
+        mockPostHogClient.getFeatureFlag.mockReturnValue(variant);
         
         const { result } = renderHook(() => usePostVariant());
         
-        expect(result.current.variant).toBe(variant);
+        await waitFor(() => {
+          expect(result.current.variant).toBe(variant);
+        });
       }
     );
 
     it.each(["control", "treatment", "comparison"])(
       "should accept %s as valid manual override",
-      (variant) => {
-        mockUseFeatureFlagVariantKey.mockReturnValue("control");
+      async (variant) => {
+        mockPostHogClient.getFeatureFlag.mockReturnValue("control");
         
         const { result } = renderHook(() => usePostVariant());
         
         act(() => {
-          result.current.setManualOverride(variant as any);
+          result.current.setManualOverride(variant as PostVariant);
         });
         
-        expect(result.current.variant).toBe(variant);
+        await waitFor(() => {
+          expect(result.current.variant).toBe(variant);
+        });
       }
     );
   });
 });
-

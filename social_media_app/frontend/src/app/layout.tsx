@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { PostHogProvider } from "@/lib/posthog";
+import { Providers } from "./providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,14 +26,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-neutral-50 dark:bg-black text-neutral-900 dark:text-neutral-50`}>
-        <PostHogProvider>
+        <Providers>
           <div className="mx-auto max-w-2xl p-4">
             <header className="sticky top-0 z-10 mb-4 border-b border-neutral-200 bg-white/80 p-3 backdrop-blur dark:border-neutral-800 dark:bg-black/60">
               <h1 className="text-xl font-semibold">Home</h1>
             </header>
             {children}
           </div>
-        </PostHogProvider>
+        </Providers>
       </body>
     </html>
   );

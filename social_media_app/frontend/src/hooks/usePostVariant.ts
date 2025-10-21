@@ -7,7 +7,6 @@ import {
   FEATURE_FLAG_KEY,
   VARIANT_OVERRIDE_KEY,
 } from "@/types/variants";
-import { getPostHog } from "@/lib/posthog";
 
 /**
  * Hook to get the current post detail page variant
@@ -28,19 +27,8 @@ export function usePostVariant(): {
 } {
   const [isClient, setIsClient] = useState(false);
   const [manualOverride, setManualOverride] = useState<PostVariant | null>(null);
-  const [featureFlagVariant, setFeatureFlagVariant] = useState<string | null>(null);
+  const [featureFlagVariant, setFeatureFlagVariant] = useState<string | undefined>(undefined);
   
-  // Get variant from PostHog feature flag
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const posthog = getPostHog();
-      if (posthog && posthog.getFeatureFlag) {
-        const variant = posthog.getFeatureFlag(FEATURE_FLAG_KEY);
-        setFeatureFlagVariant(variant);
-      }
-    }
-  }, []);
-
   useEffect(() => {
     setIsClient(true);
     
@@ -50,6 +38,28 @@ export function usePostVariant(): {
       if (override && isValidVariant(override)) {
         setManualOverride(override as PostVariant);
       }
+      
+      // Get variant from PostHog feature flag - poll until PostHog is loaded
+      const checkFeatureFlag = async () => {
+        const { getPostHog } = await import("@/lib/posthog");
+        const posthog = getPostHog();
+        if (posthog && posthog.getFeatureFlag) {
+          const variant = posthog.getFeatureFlag(FEATURE_FLAG_KEY);
+          // Convert variant to string or undefined
+          if (typeof variant === "string") {
+            setFeatureFlagVariant(variant);
+          } else if (variant === false || variant === true) {
+            setFeatureFlagVariant(variant.toString());
+          } else {
+            setFeatureFlagVariant(undefined);
+          }
+        } else {
+          // Retry after a short delay if PostHog not loaded yet
+          setTimeout(checkFeatureFlag, 100);
+        }
+      };
+      
+      checkFeatureFlag();
     }
   }, []);
 

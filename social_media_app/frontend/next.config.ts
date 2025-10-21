@@ -6,25 +6,10 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "2mb",
     },
   },
-  serverExternalPackages: ["posthog-js"],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "api.dicebear.com" },
     ],
-  },
-  webpack: (config, { isServer }) => {
-    // Exclude node modules from client bundle for PostHog
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
-        child_process: false,
-      };
-    }
-    
-    return config;
   },
 };
 
