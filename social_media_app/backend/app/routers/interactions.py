@@ -12,9 +12,10 @@ router = APIRouter(prefix="/posts", tags=["interactions"])
 def like_post(post_id: str, body: LikeRequest) -> InteractionResponse:
     if post_id not in store.posts:
         raise HTTPException(status_code=404, detail="Post not found")
-    liked = store.toggle_like(post_id, body.user_id)
+    store.add_like(post_id, body.user_id)
     post = store.posts[post_id]
-    return InteractionResponse(post=post, liked_by_user=liked)
+    liked_by_user = store.is_liked_by(post_id, body.user_id)
+    return InteractionResponse(post=post, liked_by_user=liked_by_user)
 
 
 @router.post("/{post_id}/comment", response_model=InteractionResponse)

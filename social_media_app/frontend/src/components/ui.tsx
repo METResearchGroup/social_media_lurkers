@@ -1,18 +1,18 @@
 import React from "react";
 
-export function Card({ children }: { children: React.ReactNode }) {
+export function Card({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-neutral-900">
+    <div className={`rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-neutral-900 ${className || ""}`}>
       {children}
     </div>
   );
 }
 
-export function Button({ children, onClick, variant = "ghost", disabled }: { children: React.ReactNode; onClick?: () => void; variant?: "ghost" | "primary"; disabled?: boolean; }) {
+export function Button({ children, onClick, variant = "ghost", disabled, className, type }: { children: React.ReactNode; onClick?: (e?: React.MouseEvent<HTMLButtonElement>) => void; variant?: "ghost" | "primary"; disabled?: boolean; className?: string; type?: "button" | "submit" | "reset"; }) {
   const base = "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors";
   const styles = variant === "primary" ? "bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" : "hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50";
   return (
-    <button onClick={onClick} disabled={disabled} className={`${base} ${styles}`}>
+    <button type={type || "button"} onClick={onClick} disabled={disabled} className={`${base} ${styles} ${className || ""}`}>
       {children}
     </button>
   );

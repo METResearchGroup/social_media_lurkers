@@ -17,6 +17,7 @@ dependencies = [
   "opentelemetry-sdk~=1.27.0",
   "opentelemetry-instrumentation-fastapi~=0.48b0",
   "opentelemetry-exporter-otlp~=1.27.0",
+  "faker~=30.8.0",
 ]
 
 [project.optional-dependencies]

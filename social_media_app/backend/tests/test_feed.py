@@ -30,3 +30,12 @@ class TestGetFeed:
             page2 = client.get("/feed", params={"limit": 5, "cursor": cursor}).json()
             assert len(page2["items"]) >= 0
 
+    def test_invalid_cursor(self):
+        """Invalid cursor returns empty feed."""
+        client = TestClient(app)
+        resp = client.get("/feed?cursor=invalid-cursor&limit=5")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["items"] == []
+        assert data["next_cursor"] is None
+

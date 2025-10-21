@@ -63,3 +63,13 @@ class InteractionResponse(BaseModel):
     liked_by_user: Optional[bool] = None
     new_comment: Optional[Comment] = None
 
+
+class CommentWithAuthor(Comment):
+    author: Profile
+
+
+class PostDetailResponse(BaseModel):
+    post: PostWithAuthor
+    comments: List[CommentWithAuthor]
+    liked_by_current_user: bool = False
+

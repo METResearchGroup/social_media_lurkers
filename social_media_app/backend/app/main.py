@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .routers.feed import router as feed_router
 from .routers.interactions import router as interactions_router
+from .routers.posts import router as posts_router
 from .routers.profiles import router as profiles_router
 from .telemetry import init_telemetry
 
@@ -23,6 +24,7 @@ init_telemetry(app)
 
 app.include_router(feed_router)
 app.include_router(profiles_router)
+app.include_router(posts_router)
 app.include_router(interactions_router)
 
 

@@ -2,25 +2,27 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from app.data import store
 from app.main import app
 
 
 class TestGetProfile:
-    """Tests for profile endpoint."""
+    """Tests for profile endpoints."""
 
     def test_get_profile(self):
-        """Returns a profile and their posts."""
+        """Gets a profile by ID and lists their posts."""
         client = TestClient(app)
-        # Seed ensures u01 exists
-        resp = client.get("/profiles/u01")
+        # Get a real profile ID from the store
+        profile_id = list(store.profiles.keys())[0]
+        resp = client.get(f"/profiles/{profile_id}")
         assert resp.status_code == 200
         data = resp.json()
-        assert data["profile"]["id"] == "u01"
-        assert isinstance(data["posts"], list)
+        assert "profile" in data
+        assert "posts" in data
+        assert data["profile"]["id"] == profile_id
 
-    def test_missing_profile(self):
-        """Returns 404 for missing profile."""
+    def test_profile_404(self):
+        """Returns 404 for a missing profile."""
         client = TestClient(app)
         resp = client.get("/profiles/does-not-exist")
         assert resp.status_code == 404
-

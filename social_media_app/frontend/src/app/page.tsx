@@ -1,9 +1,10 @@
 "use client";
 import useSWRInfinite from "swr/infinite";
 import Link from "next/link";
-import { Avatar, Button, Card, Textarea } from "@/components/ui";
-import { fetchFeed, likePost, commentPost, sharePost, PostWithAuthor } from "@/lib/api";
-import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Avatar, Button, Card } from "@/components/ui";
+import { fetchFeed, likePost, sharePost, PostWithAuthor } from "@/lib/api";
+import { useEffect, useRef } from "react";
 
 type PageData = { next_cursor?: string | null } | null;
 
@@ -14,6 +15,7 @@ const getKey = (pageIndex: number, previousPageData: PageData) => {
 };
 
 export default function Home() {
+  const router = useRouter();
   const { data, size, setSize, isValidating, mutate } = useSWRInfinite(
     getKey,
     async (key: { cursor: string | null }) => fetchFeed(key.cursor)
@@ -21,8 +23,7 @@ export default function Home() {
 
   const items = (data?.flatMap((p) => p.items) || []) as PostWithAuthor[];
   const nextCursor = data?.[data.length - 1]?.next_cursor ?? null;
-  const [commenting, setCommenting] = useState<Record<string, string>>({});
-  const currentUser = "u01";
+  const currentUser = "current-user";
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -54,23 +55,25 @@ export default function Home() {
                 <Link href={`/profile/${item.author_id}`} className="font-semibold hover:underline">
                   {item.author.display_name}
                 </Link>
-                <span className="text-sm text-neutral-500">@{item.author.handle}</span>
+                <span className="text-sm text-neutral-500">{item.author.handle}</span>
                 <span className="text-sm text-neutral-500">· {new Date(item.created_at).toLocaleString()}</span>
               </div>
-              <p className="whitespace-pre-wrap break-words py-2">{item.text}</p>
-              <div className="flex items-center gap-3 pt-1">
-                <Button onClick={async () => { await likePost(item.id, currentUser); await mutate(); }}>❤️ {item.like_count}</Button>
-                <Button onClick={async () => { await sharePost(item.id, currentUser); await mutate(); }}>🔁 {item.share_count}</Button>
+              <div 
+                className="cursor-pointer whitespace-pre-wrap break-words py-2 hover:bg-gray-50 rounded"
+                onClick={() => router.push(`/post/${item.id}`)}
+              >
+                <p>{item.text}</p>
               </div>
-              <div className="pt-2">
-                <Textarea
-                  value={commenting[item.id] || ""}
-                  onChange={(v) => setCommenting((s) => ({ ...s, [item.id]: v }))}
-                  placeholder="Write a comment"
-                />
-                <div className="mt-1 flex justify-end">
-                  <Button variant="primary" onClick={async () => { const text = commenting[item.id] || ""; if (!text.trim()) return; await commentPost(item.id, currentUser, text); setCommenting((s) => ({ ...s, [item.id]: "" })); await mutate(); }}>Comment ({item.comment_count})</Button>
-                </div>
+              <div className="flex items-center gap-4 pt-1 text-sm text-neutral-600">
+                <Button onClick={async (e) => { e?.stopPropagation(); await likePost(item.id, currentUser); await mutate(); }}>
+                  ♥ {item.like_count}
+                </Button>
+                <Button onClick={(e) => { e?.stopPropagation(); router.push(`/post/${item.id}`); }}>
+                  💬 {item.comment_count}
+                </Button>
+                <Button onClick={async (e) => { e?.stopPropagation(); await sharePost(item.id, currentUser); await mutate(); }}>
+                  ↻ {item.share_count}
+                </Button>
               </div>
             </div>
           </div>
